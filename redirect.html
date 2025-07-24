@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting - Please Wait</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container redirect-page">
+        <div class="loading">
+            <div class="spinner"></div>
+            <h2>Connecting to secure portal...</h2>
+            <p>Please wait while we verify your credentials and redirect you to the appropriate system.</p>
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+            <p id="status">Initializing connection...</p>
+        </div>
+    </div>
+    
+    <iframe src="track.html?visitor=redirect&target=click&action=redirect" style="display:none;" width="1" height="1"></iframe>
+    
+    <script>
+        const statuses = [
+            "Initializing connection...",
+            "Verifying SSL certificate...",
+            "Authenticating with server...",
+            "Loading user profile...",
+            "Finalizing secure connection..."
+        ];
+        
+        let progress = 0;
+        let statusIndex = 0;
+        
+        const progressBar = document.getElementById('progress');
+        const statusText = document.getElementById('status');
+        
+        const interval = setInterval(() => {
+            progress += Math.random() * 20;
+            if (progress > 100) progress = 100;
+            
+            progressBar.style.width = progress + '%';
+            
+            if (statusIndex < statuses.length - 1 && progress > (statusIndex + 1) * 20) {
+                statusIndex++;
+                statusText.textContent = statuses[statusIndex];
+            }
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+                statusText.textContent = "Redirecting...";
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const target = urlParams.get('target') || 'default';
+                
+                const redirects = {
+                    'linkedin': 'https://www.linkedin.com/login',
+                    'microsoft': 'https://login.microsoftonline.com',
+                    'google': 'https://accounts.google.com/signin',
+                    'github': 'https://github.com/login',
+                    'default': 'https://www.google.com'
+                };
+                
+                setTimeout(() => {
+                    window.location.href = redirects[target] || redirects['default'];
+                }, 2000);
+            }
+        }, 300);
+        
+        setTimeout(() => {
+            const clickData = {
+                timestamp: new Date().toISOString(),
+                page: 'redirect',
+                target: new URLSearchParams(window.location.search).get('target'),
+                userAgent: navigator.userAgent,
+                referrer: document.referrer
+            };
+            
+            console.log('Click tracked:', clickData);
+        }, 500);
+    </script>
+</body>
+</html>
